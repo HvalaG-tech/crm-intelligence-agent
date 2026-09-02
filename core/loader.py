@@ -161,8 +161,15 @@ class OlistLoader:
             orders_enriched["order_purchase_timestamp"]
         )
 
+        # `orders_enriched` porte une ligne par *article*, alors que `order_value`
+        # est un montant par *commande* : agréger directement dessus compterait
+        # une commande de trois articles trois fois. Le surcomptage mesuré était
+        # de 26 % sur le chiffre d'affaires, et il se propageait au monétaire de
+        # la RFM comme au CLV. On repasse donc au grain commande avant d'agréger.
+        par_commande = orders_enriched.drop_duplicates("order_id")
+
         customers_enriched = (
-            orders_enriched.groupby("customer_uid")
+            par_commande.groupby("customer_uid")
             .agg(
                 total_orders=("order_id", "nunique"),
                 total_revenue=("order_value", "sum"),

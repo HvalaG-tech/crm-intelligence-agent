@@ -4,16 +4,26 @@ Le jeu Olist complet pèse 146 Mo : il est exclu par `.gitignore` et ne peut pas
 partir sur GitHub. L'échantillon sert deux usages :
 
 - un clone à froid démarre sans rien télécharger ;
-- la démo en ligne tourne sur des données réelles, en volume réduit.
+- la démonstration en ligne tourne sur des données réelles, en volume réduit.
 
-Deux règles gouvernent le tirage :
+**On tire des clients, pas des commandes.** C'est la seule décision structurante
+de ce script, et elle a deux raisons :
 
-1. **Fenêtre temporelle continue**, jamais un tirage aléatoire. Le churn et la
-   RFM se calculent sur des récences : un échantillon aléatoire troue l'histoire
-   de chaque client et rend ces deux analyses fausses, pas seulement imprécises.
-2. **Intégrité référentielle**, dans les deux sens. Toute commande retenue garde
-   ses articles, paiements, avis, client, produits et vendeurs ; et aucune table
-   ne conserve de ligne orpheline.
+1. *Histoires complètes.* La RFM et le churn se calculent sur des récences. Tirer
+   des commandes trouerait l'historique de chaque client et rendrait ces deux
+   analyses fausses, pas seulement imprécises. En tirant des clients et en gardant
+   toutes leurs commandes, chaque histoire retenue est intacte.
+2. *Profondeur temporelle.* Le modèle de churn a besoin d'au moins 365 jours
+   d'inactivité pour distinguer un client perdu d'un acheteur ponctuel — c'est le
+   comportement normal sur une place de marché, où ~90 % des clients n'achètent
+   qu'une fois. Une fenêtre plus courte ne produit qu'une seule classe : le modèle
+   dégénère et rend un score nul pour tout le monde. L'échantillon couvre donc les
+   25 mois du jeu, pas une tranche.
+
+Le tirage est aléatoire mais à graine fixe : l'échantillon est reproductible, et
+il respecte la distribution réelle du jeu. On ne sur-représente pas les clients
+multi-commandes pour rendre la démonstration plus flatteuse — ce serait mentir sur
+la donnée.
 
 Usage :
     python scripts/build_sample.py
@@ -35,16 +45,15 @@ if hasattr(sys.stdout, "reconfigure"):
 RAW_DIR = Path("data/raw")
 SAMPLE_DIR = Path("data/samples")
 
-# Fenêtre retenue : douze mois pleins au cœur du jeu, là où le volume de
-# commandes est stable. Les extrémités du jeu Olist sont clairsemées (montée en
-# charge en 2016, coupure brutale fin 2018) et donneraient une saisonnalité
-# trompeuse.
-DEBUT = "2017-06-01"
-FIN = "2018-06-01"
+# Nombre de clients uniques retenus. Olist compte ~1,03 commande par client :
+# 15 000 clients donnent ~15 500 commandes, soit ~4 Mo de parquet compressé.
+NB_CLIENTS = 15_000
 
-# Plafond de commandes. Au-delà, le parquet dépasse la cible de 15 Mo sans rien
-# apporter à une démonstration.
-MAX_COMMANDES = 10_000
+# Graine fixe : deux exécutions produisent le même échantillon, et une régression
+# de chiffres dans la démonstration est donc imputable au code, jamais au tirage.
+GRAINE = 42
+
+CIBLE_OCTETS = 15e6
 
 
 def _lire(nom: str) -> pd.DataFrame:
@@ -58,20 +67,23 @@ def _lire(nom: str) -> pd.DataFrame:
 
 
 def construire() -> dict[str, pd.DataFrame]:
+    customers = _lire("olist_customers_dataset.csv")
     orders = _lire("olist_orders_dataset.csv")
-    orders["order_purchase_timestamp"] = pd.to_datetime(orders["order_purchase_timestamp"])
 
-    fenetre = orders[
-        (orders["order_purchase_timestamp"] >= DEBUT)
-        & (orders["order_purchase_timestamp"] < FIN)
-    ].copy()
+    # `customer_id` identifie une commande, `customer_unique_id` identifie une
+    # personne. C'est sur la personne qu'il faut tirer, sinon un client à trois
+    # commandes a trois fois plus de chances d'entrer, avec une seule de ses
+    # commandes retenue.
+    personnes = customers["customer_unique_id"].drop_duplicates()
+    retenues = set(
+        personnes.sample(n=min(NB_CLIENTS, len(personnes)), random_state=GRAINE)
+    )
 
-    # Tronquer sur les plus anciennes : on garde une fenêtre continue qui commence
-    # à DEBUT, plutôt que douze mois troués.
-    fenetre = fenetre.sort_values("order_purchase_timestamp").head(MAX_COMMANDES)
+    customers = customers[customers["customer_unique_id"].isin(retenues)]
+    ids_clients = set(customers["customer_id"])
 
-    ids_commandes = set(fenetre["order_id"])
-    ids_clients = set(fenetre["customer_id"])
+    orders = orders[orders["customer_id"].isin(ids_clients)]
+    ids_commandes = set(orders["order_id"])
 
     items = _lire("olist_order_items_dataset.csv")
     items = items[items["order_id"].isin(ids_commandes)]
@@ -82,9 +94,6 @@ def construire() -> dict[str, pd.DataFrame]:
     reviews = _lire("olist_order_reviews_dataset.csv")
     reviews = reviews[reviews["order_id"].isin(ids_commandes)]
 
-    customers = _lire("olist_customers_dataset.csv")
-    customers = customers[customers["customer_id"].isin(ids_clients)]
-
     # Produits et vendeurs se déduisent des articles retenus, pas des commandes.
     products = _lire("olist_products_dataset.csv")
     products = products[products["product_id"].isin(set(items["product_id"]))]
@@ -92,8 +101,8 @@ def construire() -> dict[str, pd.DataFrame]:
     sellers = _lire("olist_sellers_dataset.csv")
     sellers = sellers[sellers["seller_id"].isin(set(items["seller_id"]))]
 
-    # La géolocalisation est volumineuse (1 Mo compressé pour 1 000 000 de lignes)
-    # et n'est utile que sur les codes postaux effectivement présents.
+    # La géolocalisation pèse 1 000 000 de lignes et n'est utile que sur les codes
+    # postaux effectivement présents.
     geo = _lire("olist_geolocation_dataset.csv")
     codes = set(customers["customer_zip_code_prefix"]) | set(sellers["seller_zip_code_prefix"])
     geo = geo[geo["geolocation_zip_code_prefix"].isin(codes)].drop_duplicates(
@@ -102,12 +111,8 @@ def construire() -> dict[str, pd.DataFrame]:
 
     traduction = _lire("product_category_name_translation.csv")
 
-    # La fenêtre est reposée en texte : le parquet garde le type datetime, mais
-    # les tests de non-régression comparent des chaînes.
-    fenetre["order_purchase_timestamp"] = fenetre["order_purchase_timestamp"].astype(str)
-
     return {
-        "olist_orders_dataset": fenetre,
+        "olist_orders_dataset": orders,
         "olist_order_items_dataset": items,
         "olist_order_payments_dataset": payments,
         "olist_order_reviews_dataset": reviews,
@@ -121,11 +126,13 @@ def construire() -> dict[str, pd.DataFrame]:
 
 def verifier(tables: dict[str, pd.DataFrame]) -> None:
     """Refuse un échantillon incohérent plutôt que de le publier."""
-    commandes = set(tables["olist_orders_dataset"]["order_id"])
+    orders = tables["olist_orders_dataset"]
+    commandes = set(orders["order_id"])
     clients = set(tables["olist_customers_dataset"]["customer_id"])
     articles = tables["olist_order_items_dataset"]
 
     problemes = []
+
     for nom in (
         "olist_order_items_dataset",
         "olist_order_payments_dataset",
@@ -135,7 +142,7 @@ def verifier(tables: dict[str, pd.DataFrame]) -> None:
         if orphelines:
             problemes.append(f"{nom} : {len(orphelines)} commandes inconnues")
 
-    manquants = set(tables["olist_orders_dataset"]["customer_id"]) - clients
+    manquants = set(orders["customer_id"]) - clients
     if manquants:
         problemes.append(f"{len(manquants)} commandes sans client")
 
@@ -147,6 +154,16 @@ def verifier(tables: dict[str, pd.DataFrame]) -> None:
     if sans_vendeur:
         problemes.append(f"{len(sans_vendeur)} articles sans vendeur")
 
+    # Le seuil de churn est de 365 jours : sans au moins deux ans d'amplitude,
+    # aucun client ne peut être étiqueté perdu et le modèle rend un score nul
+    # pour tout le monde. C'est le défaut qu'on ne veut pas publier.
+    dates = pd.to_datetime(orders["order_purchase_timestamp"])
+    jours = (dates.max() - dates.min()).days
+    if jours < 500:
+        problemes.append(
+            f"amplitude temporelle de {jours} jours, insuffisante pour un seuil de churn de 365"
+        )
+
     if problemes:
         sys.exit("Échantillon incohérent :\n  - " + "\n  - ".join(problemes))
 
@@ -155,9 +172,19 @@ def main() -> None:
     tables = construire()
     verifier(tables)
 
+    orders = tables["olist_orders_dataset"]
+    dates = pd.to_datetime(orders["order_purchase_timestamp"])
+    print(
+        f"Periode {dates.min().date()} -> {dates.max().date()} "
+        f"({(dates.max() - dates.min()).days} jours)"
+    )
+    print(
+        f"{tables['olist_customers_dataset']['customer_unique_id'].nunique()} clients uniques, "
+        f"{len(orders)} commandes\n"
+    )
+
     SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
     total = 0
-    print(f"Fenêtre {DEBUT} -> {FIN}")
     for nom, df in tables.items():
         chemin = SAMPLE_DIR / f"{nom}.parquet"
         df.to_parquet(chemin, index=False, compression="zstd")
@@ -166,8 +193,8 @@ def main() -> None:
         print(f"  {nom:<40} {len(df):>7} lignes  {octets / 1e6:>6.2f} Mo")
 
     print(f"\nTotal : {total / 1e6:.2f} Mo dans {SAMPLE_DIR}/")
-    if total > 15e6:
-        sys.exit(f"Échantillon trop lourd ({total / 1e6:.1f} Mo > 15 Mo). Baissez MAX_COMMANDES.")
+    if total > CIBLE_OCTETS:
+        sys.exit(f"Echantillon trop lourd ({total / 1e6:.1f} Mo > 15 Mo). Baissez NB_CLIENTS.")
 
 
 if __name__ == "__main__":

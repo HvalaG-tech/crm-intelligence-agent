@@ -25,17 +25,25 @@ def compute_rfm(
 
     ref = pd.to_datetime(reference_date) if reference_date else orders["purchase_date"].max()
 
-    # One row per order (deduplicate items)
-    orders_dedup = orders.drop_duplicates("order_id")[["customer_id", "purchase_date", "order_value"]]
+    # Une ligne par commande : `orders_enriched` est au grain article, et
+    # `order_value` est un montant par commande.
+    orders_dedup = orders.drop_duplicates("order_id")[
+        ["customer_uid", "purchase_date", "order_value"]
+    ]
 
+    # Grouper sur `customer_uid`, jamais sur `customer_id` : chez Olist,
+    # `customer_id` est réattribué à chaque commande, si bien qu'un groupement
+    # dessus fait de chaque commande un client distinct. La fréquence vaudrait
+    # alors 1 pour tout le monde et la dimension F de la RFM ne mesurerait rien.
     rfm = (
-        orders_dedup.groupby("customer_id")
+        orders_dedup.groupby("customer_uid")
         .agg(
             recency_days=("purchase_date", lambda x: (ref - x.max()).days),
             frequency=("purchase_date", "count"),
             monetary=("order_value", "sum"),
         )
         .reset_index()
+        .rename(columns={"customer_uid": "customer_id"})
     )
 
     # Score: recency is inverted (lower days = better = higher score)
