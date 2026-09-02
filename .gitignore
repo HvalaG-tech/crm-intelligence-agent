@@ -1,0 +1,31 @@
+# Secrets — ne doivent jamais entrer dans l'historique
+.env
+.env.*
+!.env.example
+api_key.txt
+*.key
+
+# Données volumineuses. Le jeu Olist complet pèse 146 Mo : il se récupère avec
+# `python scripts/download_data.py`. Seul data/samples/ est versionné.
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+*.pkl
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Notes de travail internes, hors périmètre du dépôt public
+CLAUDE.md
+ROADMAP.md
+
+# Divers
+*.log
+.DS_Store
