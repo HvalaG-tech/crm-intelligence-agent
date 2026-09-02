@@ -159,4 +159,11 @@ C'est la section qui doit être lue avant les autres.
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE).
+**Le code** est sous licence MIT — voir [LICENSE](LICENSE).
+
+**Les données ne le sont pas.** Les fichiers de `data/samples/` sont un extrait du
+*Brazilian E-Commerce Public Dataset by Olist*, publié sous
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Cette licence suit
+ses extraits : les réutiliser impose de citer Olist, d'en rester à un usage non commercial,
+et de placer ses propres dérivés sous la même licence. Détail dans
+[`data/samples/LISEZMOI.md`](data/samples/LISEZMOI.md).
