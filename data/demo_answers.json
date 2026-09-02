@@ -1,0 +1,63 @@
+{
+  "_lisezmoi": [
+    "Réponses pré-enregistrées du mode démonstration.",
+    "Seule la NARRATION est figée ici. Les outils listés dans `etapes` sont réellement",
+    "exécutés à l'affichage : les tableaux et les graphiques sont donc calculés sur les",
+    "données, jamais des images mortes. C'est ce qui rend la démonstration gratuite",
+    "— aucun appel au modèle — sans être une maquette.",
+    "Les chiffres cités ont été relevés sur data/samples/ ; ils bougent si l'échantillon",
+    "est reconstruit avec un NB_CLIENTS ou une graine différents."
+  ],
+  "questions": [
+    {
+      "id": "vue-ensemble",
+      "question": "Donne-moi une vue d'ensemble de la base clients.",
+      "etapes": [{ "tool": "get_data_summary", "args": {} }],
+      "reponse": "La base couvre **15 477 commandes** passées par **15 000 clients** entre le 3 octobre 2016 et le 20 septembre 2018, pour **2 436 149 R$** de chiffre d'affaires et un panier moyen de **157 R$**.\n\nDeux choses ressortent immédiatement.\n\n**La concentration géographique.** São Paulo pèse 7 336 commandes, soit près d'une sur deux, devant Rio de Janeiro (2 259) et Minas Gerais (2 022). Les cinq premiers États font l'essentiel du volume : toute action commerciale nationale se jouera d'abord là.\n\n**Le comportement d'achat.** 15 000 clients pour 15 477 commandes, soit 1,03 commande par client. C'est la signature d'une place de marché, où l'essentiel des acheteurs ne revient jamais. Ce point conditionne tout ce qui suit : le sujet n'est pas de fidéliser une base récurrente, mais de repérer les rares clients qui reviennent et de comprendre ce qui les distingue."
+    },
+    {
+      "id": "rfm",
+      "question": "Segmente mes clients avec une analyse RFM.",
+      "etapes": [{ "tool": "compute_rfm", "args": {} }],
+      "reponse": "J'ai segmenté les **15 000 clients** sur les trois axes récence, fréquence et montant.\n\n| Segment | Clients | Part | Chiffre d'affaires |\n|---|---:|---:|---:|\n| Loyal Customers | 6 549 | 43,7 % | 1 167 430 R$ |\n| Champions | 3 763 | 25,1 % | 871 462 R$ |\n| At Risk | 3 687 | 24,6 % | 343 162 R$ |\n| Lost | 1 001 | 6,7 % | 54 096 R$ |\n\nLe déséquilibre est le point important. Les **Champions**, un client sur quatre, apportent 871 k R$ — soit 2,5 fois ce que rapportent les 3 687 clients *At Risk*, pourtant à peu près aussi nombreux. Autrement dit, la valeur est très concentrée sur le quart supérieur.\n\nLa récence moyenne est de **260 jours**, ce qui est élevé. Elle traduit le comportement de place de marché relevé plus haut : la plupart des clients ont acheté une fois, il y a longtemps. C'est aussi pourquoi le segment *At Risk* est aussi fourni — sur cette base, être inactif est la norme, pas l'exception."
+    },
+    {
+      "id": "churn",
+      "question": "Quels clients risquent de partir ?",
+      "etapes": [{ "tool": "predict_churn", "args": { "top_n": 10 } }],
+      "reponse": "J'ai scoré les **15 000 clients** avec un seuil d'inactivité de **365 jours**.\n\n- **9 726 clients à risque élevé** (64,8 %)\n- 5 274 clients à risque faible\n\nUn mot sur ce seuil, parce qu'il décide de tout le reste. Sur une place de marché où 97 % des clients n'achètent qu'une fois, un seuil court étiquetterait « perdu » un comportement d'achat parfaitement normal. À 365 jours, on ne signale que les clients dont l'absence est réellement anormale au regard du cycle observé.\n\nLes profils les plus à risque combinent une récence de 200 à 600 jours et un chiffre d'affaires déjà significatif — ce sont ceux-là qui méritent une relance, pas les 9 726 indistinctement. Croisé avec le segment *Champions* de l'analyse précédente, cela donne une cible de reconquête resserrée et actionnable.\n\n*Précision de méthode : le churn est ici défini par une règle d'inactivité, pas par une résiliation observée. Sur des données client réelles, cette étiquette se construit avec le métier.*"
+    },
+    {
+      "id": "sql-categories",
+      "question": "Quelles catégories de produits génèrent le plus de chiffre d'affaires ?",
+      "etapes": [
+        {
+          "tool": "sql_query",
+          "args": {
+            "query": "SELECT product_category_name AS categorie, ROUND(SUM(price),0) AS ca, COUNT(*) AS articles FROM orders_enriched WHERE product_category_name IS NOT NULL GROUP BY 1 ORDER BY ca DESC LIMIT 5"
+          }
+        }
+      ],
+      "reponse": "Voici le classement des cinq premières catégories par chiffre d'affaires.\n\n| Catégorie | CA | Articles |\n|---|---:|---:|\n| beleza_saude (beauté-santé) | 189 548 R$ | 1 495 |\n| relogios_presentes (montres-cadeaux) | 187 609 R$ | 924 |\n| cama_mesa_banho (linge de maison) | 155 015 R$ | 1 686 |\n| esporte_lazer (sport-loisirs) | 154 545 R$ | 1 344 |\n| informatica_acessorios (informatique) | 141 484 R$ | 1 212 |\n\nLes cinq se tiennent dans un mouchoir : 189 k R$ pour la première, 141 k pour la cinquième. Aucune catégorie ne domine le catalogue.\n\nEn revanche, le rapport entre le chiffre d'affaires et le nombre d'articles varie beaucoup d'une ligne à l'autre — *relogios_presentes* fait presque autant de CA que *beleza_saude* avec 40 % d'articles en moins. C'est le signe de modèles économiques différents derrière un classement qui paraît homogène."
+    },
+    {
+      "id": "sql-suivi",
+      "question": "Et ces catégories, elles vendent cher ou en volume ?",
+      "etapes": [
+        {
+          "tool": "sql_query",
+          "args": {
+            "query": "SELECT product_category_name AS categorie, COUNT(*) AS articles, ROUND(AVG(price),2) AS prix_moyen FROM orders_enriched WHERE product_category_name IN ('beleza_saude','relogios_presentes','cama_mesa_banho','esporte_lazer','informatica_acessorios') GROUP BY 1 ORDER BY prix_moyen DESC"
+          }
+        }
+      ],
+      "reponse": "J'ai repris les cinq catégories du classement précédent et comparé leur prix moyen à leur volume.\n\n| Catégorie | Articles | Prix moyen |\n|---|---:|---:|\n| relogios_presentes | 924 | 203,04 R$ |\n| beleza_saude | 1 495 | 126,79 R$ |\n| informatica_acessorios | 1 212 | 116,74 R$ |\n| esporte_lazer | 1 344 | 114,99 R$ |\n| cama_mesa_banho | 1 686 | 91,94 R$ |\n\nLes deux extrêmes répondent à votre question. **Montres-cadeaux vend cher et peu** : 203 R$ l'article, le plus petit volume des cinq, et pourtant la deuxième place au chiffre d'affaires. **Linge de maison vend en volume et bon marché** : le plus d'articles vendus, le prix moyen le plus bas, et une troisième place au CA.\n\nLes deux catégories pèsent à peu près autant au total, mais elles ne se pilotent pas de la même façon. Sur la première, un point de marge compte davantage qu'un point de volume ; sur la seconde, c'est l'inverse. Une remise uniforme sur le catalogue traiterait ces deux situations à l'identique, à tort."
+    },
+    {
+      "id": "hors-perimetre",
+      "question": "Peux-tu lancer une campagne d'emailing sur les clients à risque ?",
+      "etapes": [],
+      "reponse": "Non, et c'est volontaire : je suis un agent d'**analyse**, je n'ai aucune capacité d'action sur vos systèmes. Je ne peux ni envoyer d'email, ni écrire dans votre CRM, ni déclencher quoi que ce soit.\n\nCe que je peux faire pour cette campagne, en revanche :\n\n- **construire la cible** — les clients à risque élevé, croisés avec leur segment RFM et leur valeur, pour éviter de relancer 9 726 personnes indistinctement ;\n- **la qualifier** — combien de clients, quel chiffre d'affaires en jeu, quelles catégories ils achetaient ;\n- **produire la liste exportable** que votre outil d'emailing consommera.\n\nLa séparation est délibérée. Un agent qui analyse et qui agit dans le même mouvement est un agent dont on ne peut pas vérifier le raisonnement avant qu'il produise ses effets. Ici, vous validez la cible, puis vous déclenchez.\n\nVoulez-vous que je construise cette liste ?"
+    }
+  ]
+}
