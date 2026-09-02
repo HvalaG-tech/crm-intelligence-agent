@@ -1,0 +1,108 @@
+# Suite de questions de référence — routage des outils.
+#
+# Ce que ce fichier mesure : l'agent choisit-il le bon outil ? Il ne juge pas la
+# qualité de la rédaction, qui dépend du modèle et se déplace à chaque version.
+# Le routage, lui, dépend du prompt système et des descriptions d'outils — c'est
+# la part que ce dépôt maîtrise, donc la seule qu'il soit honnête de chiffrer.
+#
+# `tool_attendu` accepte une liste : sur une question volontairement ambiguë,
+# plusieurs routages sont défendables et le test ne tranche pas à la place du
+# bon sens. Une liste vide signifie « aucun outil » : l'agent doit répondre
+# lui-même, ou décliner.
+#
+# `doit_contenir` porte sur le RÉSULTAT DE L'OUTIL, jamais sur la rédaction
+# finale : une assertion sur la prose du modèle serait instable d'un jour à
+# l'autre sans que rien n'ait changé dans le dépôt.
+
+questions:
+  # ---------------------------------------------------------------- RFM (5)
+  - question: "Qui sont mes meilleurs clients ?"
+    tool_attendu: [compute_rfm]
+  - question: "Segmente mes clients avec une analyse RFM."
+    tool_attendu: [compute_rfm]
+    doit_contenir: "Champions"
+  - question: "Quels clients sont les plus fidèles ?"
+    tool_attendu: [compute_rfm]
+  - question: "Fais-moi une segmentation récence fréquence montant en 5 paliers."
+    tool_attendu: [compute_rfm]
+  - question: "Combien de clients sont dans le segment Champions ?"
+    tool_attendu: [compute_rfm, sql_query]
+
+  # -------------------------------------------------------------- Churn (4)
+  - question: "Quels clients risquent de partir ?"
+    tool_attendu: [predict_churn]
+    doit_contenir: "risk"
+  - question: "Donne-moi les 20 clients les plus susceptibles de churner."
+    tool_attendu: [predict_churn]
+  - question: "Quel est mon taux d'attrition ?"
+    tool_attendu: [predict_churn]
+  - question: "Qui n'a plus commandé depuis très longtemps ?"
+    tool_attendu: [predict_churn, sql_query]
+
+  # ---------------------------------------------------------- Clustering (3)
+  - question: "Regroupe mes clients par comportement d'achat."
+    tool_attendu: [run_kmeans]
+  - question: "Fais un clustering en 4 groupes."
+    tool_attendu: [run_kmeans]
+  - question: "Quels profils de clients se dégagent de la base ?"
+    tool_attendu: [run_kmeans, compute_rfm]
+
+  # ----------------------------------------------------------------- SQL (6)
+  - question: "Quel est le chiffre d'affaires total par État brésilien ?"
+    tool_attendu: [sql_query]
+  - question: "Combien de commandes ont été passées en 2018 ?"
+    tool_attendu: [sql_query]
+  - question: "Quelles sont les 10 catégories de produits les plus vendues ?"
+    tool_attendu: [sql_query]
+  - question: "Quel est le panier moyen à São Paulo ?"
+    tool_attendu: [sql_query]
+  - question: "Combien de vendeurs distincts y a-t-il ?"
+    tool_attendu: [sql_query]
+  - question: "Répartis les commandes par mode de paiement."
+    tool_attendu: [sql_query]
+
+  # ------------------------------------------------------------- Résumé (3)
+  - question: "Décris-moi le jeu de données."
+    tool_attendu: [get_data_summary]
+    doit_contenir: "Orders"
+  - question: "Quelles colonnes sont disponibles ?"
+    tool_attendu: [get_data_summary]
+  - question: "Donne-moi une vue d'ensemble de la base clients."
+    tool_attendu: [get_data_summary]
+
+  # ---------------------------------------------------------------- CLV (3)
+  - question: "Quelle est la valeur vie de mes clients ?"
+    tool_attendu: [compute_clv]
+  - question: "Sur quels clients ai-je le meilleur retour sur investissement ?"
+    tool_attendu: [compute_clv, compute_rfm]
+  - question: "Estime la CLV à 12 mois."
+    tool_attendu: [compute_clv]
+    doit_contenir: "CLV"
+
+  # ------------------------------------------------------- Capacités (2)
+  - question: "Que sais-tu faire ?"
+    tool_attendu: [list_capabilities]
+  - question: "Quelles analyses peux-tu mener sur mes données ?"
+    tool_attendu: [list_capabilities]
+
+  # ------------------------------------------- Hors périmètre (3) — décliner
+  # L'agent analyse, il n'agit pas. Ces trois questions vérifient qu'il le sait
+  # et qu'il l'explique, au lieu de bricoler une réponse avec l'outil le plus
+  # proche. Un agent qui ne sait pas dire non est un agent qu'on ne peut pas
+  # mettre devant un métier.
+  - question: "Peux-tu lancer une campagne d'emailing sur les clients à risque ?"
+    tool_attendu: []
+    hors_perimetre: true
+  - question: "Quel sera mon chiffre d'affaires en 2027 ?"
+    tool_attendu: []
+    hors_perimetre: true
+  - question: "Mets à jour l'adresse du client 1234 dans le CRM."
+    tool_attendu: []
+    hors_perimetre: true
+
+  # ------------------------------------------------------------- Ambiguës (2)
+  # Plusieurs routages se défendent : le test accepte les deux.
+  - question: "Quels clients dois-je relancer en priorité ?"
+    tool_attendu: [predict_churn, compute_rfm, compute_clv]
+  - question: "Où se trouvent mes clients les plus rentables ?"
+    tool_attendu: [sql_query, compute_clv, compute_rfm]
