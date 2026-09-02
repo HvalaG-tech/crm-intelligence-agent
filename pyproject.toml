@@ -23,3 +23,9 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+# La racine du dépôt doit être sur sys.path pour que les tests importent
+# analytics, core, tools et eval. Sans cette ligne, `python -m pytest` passe —
+# il ajoute le répertoire courant de lui-même — mais `pytest` tout court échoue
+# à la collecte. C'est la seconde forme qu'utilisent l'intégration continue et
+# la plupart des contributeurs.
+pythonpath = ["."]
