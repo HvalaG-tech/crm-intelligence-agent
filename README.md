@@ -6,7 +6,7 @@
 ![Démonstration de l'agent](docs/demo.gif)
 -->
 
-### ▶ Démonstration en ligne — `À_FOURNIR`
+### ▶ [Essayer la démonstration en ligne](https://crm-agent-hvalag.streamlit.app/)
 
 *Six questions répondent immédiatement, sans inscription et sans clé API.*
 
