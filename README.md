@@ -50,9 +50,12 @@ qualité de la rédaction : le premier dépend de ce dépôt, la seconde du mod�
 
 ```bash
 export OPENAI_API_KEY=sk-...
-python -m eval.run_eval          # taux de réussite chiffré
-python -m eval.run_eval --dry-run  # valide la suite sans aucun appel
+python eval/run_eval.py            # taux de réussite chiffré
+python eval/run_eval.py --dry-run  # valide la suite sans aucun appel
 ```
+
+*La forme `python -m eval.run_eval` fonctionne aussi, mais seulement depuis la racine du
+dépôt : ailleurs, Python ne trouve pas le paquet `eval`.*
 
 > Le taux n'est pas reporté ici tant qu'il n'a pas été mesuré sur une exécution complète.
 > Un chiffre inventé dans un README vaut moins que pas de chiffre.

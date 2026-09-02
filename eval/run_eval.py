@@ -13,10 +13,14 @@ Trois cas sont distingués :
 - **assertion de contenu** : ``doit_contenir`` est cherché dans le résultat de
   l'outil, jamais dans la prose du modèle.
 
-Usage :
+Usage, depuis n'importe quel répertoire :
     python -m eval.run_eval                 # exécution complète, nécessite OPENAI_API_KEY
     python -m eval.run_eval --dry-run       # valide le fichier de questions, sans appel
     python -m eval.run_eval --limit 5       # les cinq premières questions
+
+La forme ``-m`` exige d'être lancée depuis la racine du dépôt, faute de quoi
+Python ne trouve pas le paquet ``eval``. ``python eval/run_eval.py`` fonctionne
+depuis n'importe où.
 """
 
 from __future__ import annotations
@@ -26,7 +30,13 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+RACINE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RACINE))
+
+# core/loader.py résout ses chemins de données relativement au répertoire
+# courant. Sans ce changement de répertoire, lancer l'évaluation depuis
+# ailleurs que la racine trouverait bien le code, mais aucune donnée.
+os.chdir(RACINE)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
