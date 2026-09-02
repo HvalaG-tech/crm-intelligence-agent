@@ -1,6 +1,5 @@
 """RFM analysis — pure pandas, no external dependencies beyond numpy."""
 
-import numpy as np
 import pandas as pd
 
 

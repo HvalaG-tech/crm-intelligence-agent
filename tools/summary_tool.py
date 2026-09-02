@@ -42,7 +42,7 @@ class SummaryTool(BaseTool):
         top_states = orders["customer_state"].value_counts().head(5).to_dict()
 
         lines = [
-            f"Dataset: Olist Brazilian E-Commerce",
+            "Dataset: Olist Brazilian E-Commerce",
             f"Period: {date_min.date()} → {date_max.date()}",
             f"Orders: {orders['order_id'].nunique():,}",
             f"Customers: {customers['customer_id'].nunique():,}",

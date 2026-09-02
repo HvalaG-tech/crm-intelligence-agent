@@ -4,8 +4,8 @@ from typing import Any
 
 import pandas as pd
 
-from analytics.segmentation import kmeans_segments, format_segment_summary
 from analytics.plots import plot_segments_scatter
+from analytics.segmentation import format_segment_summary, kmeans_segments
 from tools.base import BaseTool
 
 

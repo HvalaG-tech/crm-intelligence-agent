@@ -4,7 +4,6 @@ from typing import Any
 
 from tools.base import BaseTool
 
-
 CAPABILITIES_TEXT = """
 ## Ce que l'agent CRM peut faire
 

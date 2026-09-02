@@ -1,10 +1,8 @@
 """KMeans customer segmentation."""
 
-import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
 
 FEATURES = ["total_orders", "total_revenue", "avg_order_value"]
 

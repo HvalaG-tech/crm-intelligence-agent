@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 
+from analytics.plots import definir_theme
 from app.components.metrics import render_kpi_cards
 from app.components.sidebar import render_sidebar
 from core.agent import CRMAgent, ErreurAgent
@@ -21,6 +22,24 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
 )
+
+def _theme_sombre() -> bool:
+    """Vrai si le visiteur est en thème sombre.
+
+    Streamlit n'expose pas cette information dans toutes les versions ni dans
+    tous les contextes d'exécution : en cas de doute on rend le thème clair,
+    qui est le défaut de Streamlit.
+    """
+    try:
+        return getattr(st.context.theme, "type", "light") == "dark"
+    except Exception:
+        return False
+
+
+# Les figures sont construites par les outils, qui ne connaissent pas Streamlit :
+# le thème est posé ici, une fois, avant toute construction.
+definir_theme(_theme_sombre())
+
 
 # Libellés parlants pour la trace de raisonnement : le visiteur lit ce que
 # l'agent fait, pas le nom interne de la fonction appelée.
@@ -102,7 +121,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         for fig in msg.get("figures", []):
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, theme=None)
         if msg.get("etapes"):
             with st.expander("Comment j'ai obtenu ce résultat"):
                 for etape in msg["etapes"]:
@@ -139,7 +158,7 @@ if question and data is not None:
         if reponse_demo is not None:
             st.markdown(reponse_demo.texte)
             for fig in reponse_demo.figures:
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, theme=None)
             if reponse_demo.etapes:
                 with st.expander("Comment j'ai obtenu ce résultat"):
                     for etape in reponse_demo.etapes:
@@ -187,7 +206,7 @@ if question and data is not None:
                 st.session_state.questions_posees += 1
                 st.markdown(reponse)
                 for fig in figures:
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True, theme=None)
 
                 etapes = list(agent.dernieres_etapes)
                 if etapes:

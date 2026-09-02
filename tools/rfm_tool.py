@@ -4,8 +4,8 @@ from typing import Any
 
 import pandas as pd
 
-from analytics.rfm import compute_rfm, format_rfm_summary
 from analytics.plots import plot_rfm_scatter
+from analytics.rfm import compute_rfm, format_rfm_summary
 from tools.base import BaseTool
 
 
