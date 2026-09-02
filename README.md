@@ -37,6 +37,7 @@ entre une question posée en français et le calcul qui y répond.
 
 | Ce qui est mesuré | Valeur |
 |---|---|
+| Routage vers le bon outil | **31/31 questions (100 %)** |
 | Outils d'analyse exposés à l'agent | 7 |
 | Tests automatisés, tous au vert | 33 |
 | Requêtes SQL hostiles bloquées sous test | 11 |
@@ -57,8 +58,11 @@ python eval/run_eval.py --dry-run  # valide la suite sans aucun appel
 *La forme `python -m eval.run_eval` fonctionne aussi, mais seulement depuis la racine du
 dépôt : ailleurs, Python ne trouve pas le paquet `eval`.*
 
-> Le taux n'est pas reporté ici tant qu'il n'a pas été mesuré sur une exécution complète.
-> Un chiffre inventé dans un README vaut moins que pas de chiffre.
+**Dernière mesure : 31/31, le 2 septembre 2026, sur `gpt-4o`.** Deux réserves honnêtes sur
+ce 100 % : les cinq questions ambiguës acceptent plusieurs routages défendables, et les
+trois questions hors périmètre se valident par l'absence d'appel d'outil. La suite est donc
+un garde-fou de non-régression — elle attrape un prompt système dégradé ou un changement de
+modèle qui déplace le routage — plutôt qu'un classement de difficulté.
 
 ## Architecture
 
