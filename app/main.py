@@ -15,6 +15,7 @@ from core.agent import CRMAgent, ErreurAgent
 from core.config import settings
 from core.demo import Demonstration
 from core.loader import OlistLoader
+from core.texte import texte_md
 from tools import get_all_tools
 
 st.set_page_config(
@@ -123,7 +124,7 @@ if "questions_posees" not in st.session_state:
 # ------------------------------------------------------------------
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        st.markdown(texte_md(msg["content"]))
         for fig in msg.get("figures", []):
             st.plotly_chart(fig, use_container_width=True, theme=None)
         if msg.get("etapes"):
@@ -160,7 +161,7 @@ if question and data is not None:
     with st.chat_message("assistant"):
         # --- Voie 1 : question du parcours, servie sans appeler le modèle -----
         if reponse_demo is not None:
-            st.markdown(reponse_demo.texte)
+            st.markdown(texte_md(reponse_demo.texte))
             for fig in reponse_demo.figures:
                 st.plotly_chart(fig, use_container_width=True, theme=None)
             if reponse_demo.etapes:
@@ -208,7 +209,7 @@ if question and data is not None:
                     statut.update(label="Analyse terminée", state="complete", expanded=False)
 
                 st.session_state.questions_posees += 1
-                st.markdown(reponse)
+                st.markdown(texte_md(reponse))
                 for fig in figures:
                     st.plotly_chart(fig, use_container_width=True, theme=None)
 
