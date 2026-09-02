@@ -43,7 +43,7 @@ entre une question posée en français et le calcul qui y répond.
 | Requêtes SQL hostiles bloquées sous test | 11 |
 | Coût d'une visite du parcours de démonstration | 0 appel au modèle |
 | Échantillon embarqué dans le dépôt | 15 000 clients · 15 477 commandes · 716 jours · 4,2 Mo |
-| Poids total du dépôt | 2,6 Mo |
+| Poids d'un clone, historique compris | 6,7 Mo |
 
 **Routage des outils.** La suite `eval/questions.yaml` couvre 31 questions sur les 7 outils,
 dont 3 hors périmètre et 5 volontairement ambiguës. Elle mesure le choix de l'outil, pas la
