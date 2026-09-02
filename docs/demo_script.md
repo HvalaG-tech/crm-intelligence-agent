@@ -1,54 +1,39 @@
-# Demo Script — 5 Reference Questions
+# Parcours de démonstration — les six questions
 
-These 5 questions are the minimum viable demo. Each should work correctly before the project is considered complete.
+Ces six questions sont celles des boutons de la page d'accueil. Elles sont servies par le
+mode démonstration : la narration est pré-enregistrée dans `data/demo_answers.json`, mais
+les outils sont **réellement exécutés**, donc les tableaux et les graphiques sont calculés
+sur les données du dépôt. Aucun appel au modèle, aucune clé requise.
 
----
+L'ordre n'est pas décoratif : il va du cadrage général à la preuve que l'agent connaît ses
+limites, en passant par le moment qui démontre la mémoire conversationnelle.
 
-## Q1 — RFM Segmentation
+| # | Question | Outil exécuté | Ce que la réponse doit établir |
+|---|---|---|---|
+| 1 | Donne-moi une vue d'ensemble de la base clients. | `get_data_summary` | Le cadrage : 15 477 commandes, 15 000 clients, 2 436 149 R$, et le fait que 1,03 commande par client conditionne toutes les analyses suivantes |
+| 2 | Segmente mes clients avec une analyse RFM. | `compute_rfm` | Les quatre segments et leur déséquilibre : les Champions, un client sur quatre, pèsent 2,5 fois les *At Risk* pourtant aussi nombreux |
+| 3 | Quels clients risquent de partir ? | `predict_churn` | 64,8 % à risque, et surtout la justification du seuil de 365 jours sur une place de marché |
+| 4 | Quelles catégories de produits génèrent le plus de chiffre d'affaires ? | `sql_query` | Cinq catégories resserrées, mais des rapports CA/volume très différents |
+| 5 | Et ces catégories, elles vendent cher ou en volume ? | `sql_query` | **La mémoire.** « Ces catégories » n'a de sens que si le tour précédent est retenu. Montres-cadeaux vend cher et peu, linge de maison en volume et bon marché |
+| 6 | Peux-tu lancer une campagne d'emailing sur les clients à risque ? | *aucun* | **Les limites.** L'agent analyse, il n'agit pas, et il l'explique au lieu de bricoler une réponse |
 
-**Input:** "Qui sont mes meilleurs clients ?"
+## Si l'on enregistre une démonstration animée
 
-**Expected tool call:** `compute_rfm`  
-**Expected output:** Text summary with Champions/Loyal/At Risk/Lost counts + scatter chart.  
-**Key assertion:** Champions segment identified, chart visible with 4 distinct colors.
+Trois battements suffisent, et il faut enregistrer **en mode démonstration** : les réponses
+sont instantanées, donc pas de temps mort à couper, et elles sont identiques d'une prise à
+l'autre.
 
----
+1. La page au repos, indicateurs visibles — le contexte se comprend sans lire.
+2. Question 4, puis question 5. C'est la paire qui vend : le suivi prouve ce qu'un tableau
+   de bord ne sait pas faire.
+3. Ouverture de « Comment j'ai obtenu ce résultat » : le SQL réellement exécuté apparaît.
 
-## Q2 — Churn Risk
+La question 6 est un excellent argument, mais elle se lit mieux à l'écrit : à l'image, c'est
+un bloc de texte sans graphique.
 
-**Input:** "Quels clients risquent de partir dans les prochains mois ?"
+## Chiffres de référence
 
-**Expected tool call:** `predict_churn`  
-**Expected output:** Count of high-risk customers + top 20 ranked list + horizontal bar chart.  
-**Key assertion:** Churn scores between 0 and 1, chart renders.
-
----
-
-## Q3 — Ad-hoc SQL
-
-**Input:** "Montre-moi le revenu total par état brésilien, du plus grand au plus petit."
-
-**Expected tool call:** `sql_query`  
-**Expected SQL:** `SELECT customer_state, SUM(order_value) AS revenue FROM orders_enriched GROUP BY customer_state ORDER BY revenue DESC`  
-**Expected output:** Table + bar chart with ~27 states.  
-**Key assertion:** SP (São Paulo) should be the top state by revenue.
-
----
-
-## Q4 — Multi-turn Memory
-
-**Input (after Q1):** "Maintenant segmente ces clients par comportement, pas par RFM."
-
-**Expected tool call:** `run_kmeans`  
-**Expected output:** 4 behavioral clusters with revenue/order stats + scatter chart.  
-**Key assertion:** Agent remembers context from Q1, uses KMeans (not RFM again).
-
----
-
-## Q5 — Out-of-scope Graceful Degradation
-
-**Input:** "Prédis le revenu du mois prochain."
-
-**Expected tool call:** `list_capabilities`  
-**Expected output:** Clear explanation that revenue forecasting is not available + suggestion of what the agent CAN do.  
-**Key assertion:** No hallucinated numbers, no crash, polite redirection.
+Ceux du tableau ci-dessus valent pour l'échantillon versionné (`data/samples/`), tel que
+produit par `scripts/build_sample.py` avec ses réglages par défaut. Ils changent si
+`NB_CLIENTS` ou la graine sont modifiés, et diffèrent du jeu Olist complet, qui compte
+~99 000 commandes.

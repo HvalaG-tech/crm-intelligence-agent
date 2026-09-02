@@ -2,9 +2,11 @@
 
 **Vos équipes marketing obtiennent leurs analyses clients sans passer par la data team.**
 
+<!-- Démonstration animée : déposer docs/demo.gif et décommenter la ligne suivante.
 ![Démonstration de l'agent](docs/demo.gif)
+-->
 
-### ▶ [Essayer la démonstration en ligne](À_FOURNIR)
+### ▶ Démonstration en ligne — `À_FOURNIR`
 
 *Six questions répondent immédiatement, sans inscription et sans clé API.*
 
