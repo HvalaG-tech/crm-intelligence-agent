@@ -1,10 +1,12 @@
-openai>=1.30.0
-streamlit>=1.35.0
-pandas>=2.1.0
-numpy>=1.26.0
-scikit-learn>=1.4.0
-plotly>=5.20.0
-duckdb>=0.10.0
-pydantic-settings>=2.2.0
-python-dotenv>=1.0.0
-pyarrow>=14.0.0
+# Versions figées : une démonstration publique qui casse parce qu'une
+# dépendance a bougé coûte plus cher que le confort d'une borne souple.
+openai==1.83.0
+streamlit==1.58.0
+pandas==2.2.3
+numpy==2.2.4
+scikit-learn==1.8.0
+plotly==6.7.0
+duckdb==1.5.3
+pydantic-settings==2.10.1
+python-dotenv==1.1.1
+pyarrow==19.0.1

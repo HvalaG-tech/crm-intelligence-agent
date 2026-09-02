@@ -1,148 +1,153 @@
-# CRM Intelligence Agent
+# Agent d'analyse CRM
 
-> A conversational AI agent that analyses 100k+ e-commerce orders and answers business questions in natural language — powered by OpenAI function calling and scikit-learn.
+**Vos équipes marketing obtiennent leurs analyses clients sans passer par la data team.**
 
----
+![Démonstration de l'agent](docs/demo.gif)
 
-## Demo
+### ▶ [Essayer la démonstration en ligne](À_FOURNIR)
 
-*[Add demo GIF here — record 4 exchanges: RFM, churn, SQL, multi-turn]*
-
----
-
-## What it does
-
-- **Ask in natural language** — "Who are my best customers?" or "Which clients are at risk of churning?"
-- **Agent picks the right analysis** — RFM segmentation, churn prediction, KMeans clustering, CLV estimation, or ad-hoc SQL
-- **Automatic visualisations** — Plotly charts generated and displayed alongside each response
-- **Multi-turn memory** — follow-up questions build on previous analyses
+*Six questions répondent immédiatement, sans inscription et sans clé API.*
 
 ---
+
+## Le problème
+
+Dans la plupart des directions marketing, « qui sont nos meilleurs clients », « lesquels
+risquent de partir » et « combien pèse cette catégorie » sont des questions à un ticket
+Jira et deux semaines d'attente. Quand la réponse arrive, la campagne est partie sans elle.
+
+Les données sont pourtant là, et les analyses sont connues. Ce qui manque, c'est le chemin
+entre une question posée en français et le calcul qui y répond.
+
+## Ce que ça fait
+
+- **Répond en français à une question métier** en choisissant lui-même la bonne analyse :
+  segmentation RFM, score de départ, valeur vie client, regroupement comportemental,
+  ou requête SQL libre quand la question ne rentre dans aucune case.
+- **Montre son raisonnement.** Chaque réponse ouvre sur les outils appelés, leurs
+  paramètres et leur résultat brut. Rien n'est à croire sur parole.
+- **Garde la mémoire de la conversation** : « et ces catégories, elles vendent cher ou
+  en volume ? » fonctionne sans répéter le contexte.
+- **Sait dire non.** Une demande d'action — envoyer un email, écrire dans le CRM — est
+  déclinée avec son motif, au lieu d'être bricolée avec l'outil le plus proche.
+- **Ne coûte rien à visiter.** Le parcours de démonstration sert des analyses réellement
+  calculées, sans aucun appel au modèle.
+
+## Résultats mesurés
+
+| Ce qui est mesuré | Valeur |
+|---|---|
+| Outils d'analyse exposés à l'agent | 7 |
+| Tests automatisés, tous au vert | 33 |
+| Requêtes SQL hostiles bloquées sous test | 11 |
+| Coût d'une visite du parcours de démonstration | 0 appel au modèle |
+| Échantillon embarqué dans le dépôt | 15 000 clients · 15 477 commandes · 716 jours · 4,2 Mo |
+| Poids total du dépôt | 2,6 Mo |
+
+**Routage des outils.** La suite `eval/questions.yaml` couvre 31 questions sur les 7 outils,
+dont 3 hors périmètre et 5 volontairement ambiguës. Elle mesure le choix de l'outil, pas la
+qualité de la rédaction : le premier dépend de ce dépôt, la seconde du modèle du jour.
+
+```bash
+export OPENAI_API_KEY=sk-...
+python -m eval.run_eval          # taux de réussite chiffré
+python -m eval.run_eval --dry-run  # valide la suite sans aucun appel
+```
+
+> Le taux n'est pas reporté ici tant qu'il n'a pas été mesuré sur une exécution complète.
+> Un chiffre inventé dans un README vaut moins que pas de chiffre.
 
 ## Architecture
 
 ```
-User (browser)
-    ↓
-Streamlit UI
-    ↓
-CRMAgent (OpenAI function calling — GPT-4o)
-    ├── compute_rfm      → RFM segmentation (pandas)
-    ├── predict_churn    → Churn scoring (RandomForest)
-    ├── run_kmeans       → Behavioral clustering (KMeans)
-    ├── compute_clv      → Customer Lifetime Value
-    ├── sql_query        → Ad-hoc SQL (DuckDB)
-    └── get_data_summary → Dataset overview
-    ↓
-Plotly charts + text response → Streamlit UI
+                      Question en français
+                              │
+                              ▼
+                    ┌───────────────────┐
+      mode démo ───►│    core/agent     │  boucle d'outils (function calling)
+   (sans modèle)    │  + core/demo      │  5 itérations maximum
+                    └─────────┬─────────┘
+                              │ choisit un outil
+      ┌───────────┬───────────┼───────────┬────────────┐
+      ▼           ▼           ▼           ▼            ▼
+  compute_rfm  predict_    run_kmeans  sql_query   compute_clv
+               churn                   (verrouillé)   + 2 autres
+      │           │           │           │            │
+      └───────────┴─────┬─────┴───────────┴────────────┘
+                        ▼
+                 analytics/  (pandas · scikit-learn · Plotly)
+                        │
+                        ▼
+                 core/loader   cache ▸ jeu complet ▸ échantillon
+                        │
+                        ▼
+             Réponse rédigée + graphique + trace des étapes
 ```
 
----
+Deux points de conception méritent d'être signalés.
 
-## Available tools
+**`sql_query` est traité comme une surface d'attaque**, puisqu'il exécute du texte produit
+par un modèle. Les DataFrames sont matérialisés en tables, puis l'accès externe de DuckDB
+est coupé et la configuration verrouillée — le moteur refuse alors de lui-même le disque,
+le réseau et les extensions. Une liste blanche syntaxique s'y ajoute, non pour protéger
+davantage, mais pour rendre un refus que l'agent sait expliquer.
 
-| Tool | What it does | Example question |
-|---|---|---|
-| `compute_rfm` | RFM segmentation (Champions, Loyal, At Risk, Lost) | "Segment my customers by value" |
-| `predict_churn` | Rank customers by churn probability | "Which customers might leave?" |
-| `run_kmeans` | Behavioral clustering | "Group customers by purchase behavior" |
-| `compute_clv` | 12-month CLV estimation | "Who are my highest-value customers?" |
-| `sql_query` | DuckDB SELECT queries | "Total revenue by Brazilian state" |
-| `get_data_summary` | Dataset overview | "Describe the data" |
-| `list_capabilities` | What the agent can/cannot do | "What can you analyse?" |
+**Le mode démonstration ne fige que la narration.** Les outils sont réellement exécutés à
+l'affichage : les tableaux et les graphiques sont calculés sur les données du dépôt. Ce
+n'est pas une maquette, c'est le vrai calcul avec un commentaire pré-écrit.
 
----
+## Stack
 
-## Quick Start
+| Rôle | Technologie |
+|---|---|
+| Orchestration de l'agent | OpenAI function calling |
+| Analyse | pandas · scikit-learn |
+| SQL analytique | DuckDB, en lecture seule verrouillée |
+| Visualisation | Plotly |
+| Interface | Streamlit |
+| Configuration | pydantic-settings |
+| Qualité | pytest · ruff · GitHub Actions |
 
-### 1. Installation
+## Installation
 
 ```bash
-git clone <repo-url>
-cd 02_CRM_Agent
 pip install -r requirements.txt
-```
-
-### 2. Données Olist (première fois uniquement)
-
-```bash
-# Option A — téléchargement automatique via Kaggle API
-KAGGLE_API_TOKEN=<votre_token>  python scripts/download_data.py
-python scripts/preprocess.py
-
-# Option B — téléchargement manuel
-# 1. Télécharger le ZIP sur https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-# 2. Extraire les 8 CSV dans data/raw/
-# 3. Lancer : python scripts/preprocess.py
-```
-
-> Le preprocessing génère les fichiers `data/processed/` (parquet). À ne faire qu'une seule fois.
-
-### 3. Lancer le dashboard
-
-**Windows (PowerShell) :**
-```powershell
-$env:PYTHONPATH = "."
-$env:OPENAI_API_KEY = "sk-..."   # ou saisir la clé directement dans la sidebar
 streamlit run app/main.py
 ```
 
-**macOS / Linux :**
-```bash
-PYTHONPATH=. OPENAI_API_KEY=sk-... streamlit run app/main.py
-```
+L'application démarre sur l'échantillon embarqué, sans clé et sans téléchargement. Pour
+travailler sur le jeu Olist complet, lancez `python scripts/download_data.py` puis
+`python scripts/preprocess.py`. Pour poser des questions libres, ajoutez votre clé OpenAI
+dans la barre latérale, ou dans un fichier `.env` sur le modèle de `.env.example`.
 
-**Ou via fichier `.env` :**
-```bash
-cp .env.example .env      # éditer le fichier et renseigner OPENAI_API_KEY
-PYTHONPATH=. streamlit run app/main.py
-```
+## Limites connues
 
-L'app est accessible sur **http://localhost:8501**
+C'est la section qui doit être lue avant les autres.
 
-> La clé OpenAI peut aussi être saisie directement dans la barre latérale de l'interface,  
-> sans configurer de variable d'environnement.
+- **Les données sont publiques, pas réelles.** Le jeu [Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+  décrit une place de marché brésilienne entre 2016 et 2018. Aucune donnée client réelle
+  n'entre dans ce dépôt.
+- **La démonstration en ligne tourne sur un échantillon**, pas sur le jeu complet : 15 000
+  clients tirés au sort avec toute leur histoire, contre ~99 000 commandes en local. Les
+  ordres de grandeur diffèrent donc de ceux qu'on lit habituellement sur Olist.
+- **Le churn est une règle d'inactivité, pas une résiliation observée.** Le seuil est fixé
+  à 365 jours parce que ~97 % des clients de cette base n'achètent qu'une fois : plus court,
+  on étiquetterait « perdu » un comportement d'achat parfaitement normal. Sur des données
+  client réelles, cette étiquette se construit avec le métier, elle ne se devine pas.
+- **Le score de départ sature.** Le modèle rend 1,00 pour tous les clients franchement
+  inactifs, ce qui les met à égalité par milliers. C'est pourquoi le graphique classe par
+  chiffre d'affaires à risque plutôt que par score : la question utile est « lesquels
+  rappeler en premier », pas « lesquels ont le plus haut score ».
+- **La valeur vie client est une estimation à 12 mois, volontairement simple.** Elle
+  additionne le réalisé et une projection de fréquence ; pour les acheteurs uniques, cette
+  fréquence est l'espérance de réachat de la population, faute de pouvoir lire quoi que ce
+  soit dans un historique d'une seule ligne. Ce n'est pas un modèle BG/NBD.
+- **L'agent analyse, il n'agit pas.** Aucune écriture, aucun envoi, aucun déclenchement.
+  La séparation est délibérée : un agent qui analyse et agit dans le même mouvement est un
+  agent dont on ne peut pas vérifier le raisonnement avant qu'il produise ses effets.
+- **Le routage dépend du modèle.** Il est mesuré par `eval/`, mais un changement de modèle
+  peut le déplacer sans qu'une ligne de ce dépôt ait bougé.
 
----
+## Licence
 
-## Dataset
-
-**Olist Brazilian E-Commerce** — [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)  
-~100k orders | 96k customers | 8 tables | Brazil, 2016-2018 | Public domain
-
----
-
-## Technical highlights
-
-- **OpenAI function calling** with multi-step reasoning (max 5 tool iterations per turn)
-- **Stateless tool design** — each tool is a typed Python class implementing `BaseTool`
-- **DuckDB** for in-process SQL on pandas DataFrames (no server required)
-- **scikit-learn** RandomForest churn model trained at runtime on engineered features
-- **Streamlit session state** pattern for persistent agent memory across UI reruns
-- **Output size control** — all tool results hard-truncated at 2000 chars before injection into context
-
----
-
-## Project structure
-
-```
-02_CRM_Agent/
-├── app/          # Streamlit UI
-├── core/         # Agent loop, data loader, config
-├── tools/        # 7 OpenAI function-calling tools
-├── analytics/    # Pure pandas/sklearn logic (testable without LLM)
-├── docs/         # Data dictionary, tool schemas, demo script
-├── tests/        # pytest suite (no OpenAI calls needed)
-└── scripts/      # Data download and preprocessing
-```
-
----
-
-## Skills demonstrated
-
-- LLM orchestration with function calling (OpenAI SDK)
-- CRM analytics: RFM, churn modelling, segmentation, CLV (Dior & Galeries Lafayette experience)
-- Machine learning pipeline with scikit-learn
-- Interactive data application with Streamlit
-- DuckDB for lightweight SQL analytics
-- Clean Python architecture (typed interfaces, separation of concerns)
+MIT — voir [LICENSE](LICENSE).
