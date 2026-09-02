@@ -21,6 +21,10 @@ st.set_page_config(
     page_title="Agent d'analyse CRM",
     page_icon="📊",
     layout="wide",
+    # Repliée par défaut : elle ne contient que de la configuration, et le
+    # parcours de démonstration n'en a aucun besoin. Le visiteur qui veut poser
+    # ses propres questions y est renvoyé explicitement par le message d'accueil.
+    initial_sidebar_state="collapsed",
 )
 
 def _theme_sombre() -> bool:
